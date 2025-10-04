@@ -4,33 +4,43 @@ require("dotenv").config();
 
 const express = require("express");
 const { Pool } = require("pg");
-const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 const basicAuth = require("express-basic-auth");
+// (opcional) const cors = require("cors");
 
 const app = express();
-app.use(cors());
+
+// --- Parsers (deben ir después de crear app) ---
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Helper para excluir algunas rutas (ej: healthcheck)
-function unless(paths, mw) {
-  return (req, res, next) => {
-    if (paths.some((p) => req.path.startsWith(p))) return next();
-    return mw(req, res, next);
-  };
-}
+// --- CORS + preflight (deja pasar OPTIONS antes del auth) ---
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") return res.sendStatus(204); // clave para Basic Auth
+  next();
+});
 
-// Solo activamos la protección si hay credenciales en .env
+// (opcional) si querés usar la librería cors además de lo anterior:
+// app.use(cors());
+
+// --- Basic Auth (protege todo salvo /health/db) ---
 if (process.env.ADMIN_USER && process.env.ADMIN_PASS) {
   const auth = basicAuth({
     users: { [process.env.ADMIN_USER]: process.env.ADMIN_PASS },
-    challenge: true, // hace que el navegador muestre el diálogo de login
+    challenge: true,
     unauthorizedResponse: { error: "No autorizado" },
   });
 
-  // Proteger TODO excepto el healthcheck (útil para Render)
-  app.use(unless(["/health/db"], auth));
+  app.use((req, res, next) => {
+    // no desafiar preflights ni health
+    if (req.method === "OPTIONS") return res.sendStatus(204);
+    if (req.path.startsWith("/health/db")) return next();
+    return auth(req, res, next);
+  });
 } else {
   console.warn("⚠️ Sin ADMIN_USER/ADMIN_PASS -> la app queda sin protección.");
 }
