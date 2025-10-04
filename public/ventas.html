@@ -2,7 +2,7 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins&display=swap"
       rel="stylesheet"
@@ -40,15 +40,33 @@
     </style>
   </head>
   <body>
-    <aside class="sidebar">
-      <h1>Natura<br />Pauli</h1>
-      <nav>
-        <a href="index.html">Home</a>
-        <a href="productos.html">Productos</a>
-        <a href="clientes.html">Clientes</a>
-        <a class="active" href="ventas.html">Ventas</a>
-      </nav>
-    </aside>
+    <!-- Topbar con menú hamburguesa -->
+    <header class="topbar">
+      <button
+        class="hamburger"
+        id="btnMenu"
+        aria-label="Abrir menú"
+        aria-controls="sidebar"
+        aria-expanded="false"
+      >
+        <span></span><span></span><span></span>
+      </button>
+      <h1 class="brand">Natura Graciela</h1>
+    </header>
+
+    <!-- Sidebar: desktop fijo / mobile off-canvas -->
+    <nav id="sidebar" class="sidebar" aria-hidden="true">
+      <h1 style="margin: 0 0 8px 0; font-size: 20px; line-height: 1.1">
+        Natura<br />Graciela
+      </h1>
+      <a href="index.html">Home</a>
+      <a href="productos.html">Productos</a>
+      <a href="clientes.html">Clientes</a>
+      <a class="active" href="ventas.html">Ventas</a>
+    </nav>
+
+    <!-- Fondo para cerrar el menú en mobile -->
+    <div class="backdrop" id="backdrop"></div>
 
     <main class="content">
       <h2 class="title">Ventas</h2>
@@ -65,21 +83,24 @@
           />
           <span id="ventasCount" style="opacity: 0.8"></span>
         </div>
-        <table id="tbl-ventas">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Fecha</th>
-              <th>Cliente</th>
-              <th>Tipo</th>
-              <th>Total</th>
-              <th>Saldo</th>
-              <th>Interés</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+
+        <div class="table-responsive">
+          <table id="tbl-ventas">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Tipo</th>
+                <th>Total</th>
+                <th>Saldo</th>
+                <th>Interés</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
 
       <!-- Nueva venta -->
@@ -93,16 +114,13 @@
               gap: 12px;
             "
           >
-            <label
-              >Fecha
-              <input type="date" name="fecha" />
-            </label>
+            <label>Fecha <input type="date" name="fecha" /></label>
             <label
               >Cliente
-              <select name="clienteId" required></select>
-            </label>
-            <label
-              >Tipo de pago
+              <select name="clienteId" required></select
+            ></label>
+            <label>
+              Tipo de pago
               <select name="tipoPago" required>
                 <option value="Contado">Contado</option>
                 <option value="Credito">Crédito</option>
@@ -111,7 +129,7 @@
           </div>
 
           <h4 style="margin-top: 16px">Items</h4>
-          <div style="overflow: auto">
+          <div class="table-responsive">
             <table id="tbl-items" style="min-width: 760px">
               <thead>
                 <tr>
@@ -153,8 +171,7 @@
                   min="0"
                   step="0.01"
                   value="0"
-                />
-              </label>
+              /></label>
               <label
                 >Cuotas (cantidad)
                 <input
@@ -163,12 +180,10 @@
                   min="1"
                   step="1"
                   value="3"
-                />
-              </label>
+              /></label>
               <label
-                >1º vencimiento
-                <input type="date" name="primerVencimiento" />
-              </label>
+                >1º vencimiento <input type="date" name="primerVencimiento"
+              /></label>
               <div style="display: flex; align-items: flex-end">
                 <button type="button" id="btnGenerarCuotas">
                   Generar cuotas
@@ -176,7 +191,7 @@
               </div>
             </div>
 
-            <div style="overflow: auto; margin-top: 8px">
+            <div class="table-responsive" style="margin-top: 8px">
               <table id="tbl-cuotas" style="min-width: 560px">
                 <thead>
                   <tr>
@@ -237,45 +252,51 @@
         <div id="ventaCab" style="margin-top: 8px; opacity: 0.9"></div>
 
         <h4 style="margin-top: 12px">Items</h4>
-        <table id="tbl-det-items">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Producto</th>
-              <th>Cantidad</th>
-              <th>Precio unit.</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+          <table id="tbl-det-items">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio unit.</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
 
         <div id="bloqueCuotas" style="display: none">
           <h4 style="margin-top: 12px">Cuotas</h4>
-          <table id="tbl-det-cuotas">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Vence</th>
-                <th>Monto</th>
-                <th>Pagado</th>
-                <th>Saldo</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+          <div class="table-responsive">
+            <table id="tbl-det-cuotas">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Vence</th>
+                  <th>Monto</th>
+                  <th>Pagado</th>
+                  <th>Saldo</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
 
           <h4 style="margin-top: 12px">Pagos</h4>
-          <table id="tbl-det-pagos">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Fecha</th>
-                <th>Monto</th>
-                <th>Cuota</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+          <div class="table-responsive">
+            <table id="tbl-det-pagos">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Fecha</th>
+                  <th>Monto</th>
+                  <th>Cuota</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -293,12 +314,9 @@
           >
             <label
               >Monto
-              <input type="number" name="monto" min="0" step="0.01" required />
-            </label>
-            <label
-              >Fecha
-              <input type="date" name="fecha" />
-            </label>
+              <input type="number" name="monto" min="0" step="0.01" required
+            /></label>
+            <label>Fecha <input type="date" name="fecha" /></label>
           </div>
           <div style="margin-top: 12px; display: flex; gap: 8px">
             <button type="submit">Aplicar</button>
@@ -309,5 +327,31 @@
     </main>
 
     <script src="ventas.js"></script>
+
+    <!-- JS para abrir/cerrar el menú hamburguesa -->
+    <script>
+      (function () {
+        const btn = document.getElementById("btnMenu");
+        const sidebar = document.getElementById("sidebar");
+        const backdrop = document.getElementById("backdrop");
+        if (!btn || !sidebar || !backdrop) return;
+
+        function toggle() {
+          const open = sidebar.classList.toggle("open");
+          document.body.classList.toggle("no-scroll", open);
+          backdrop.classList.toggle("show", open);
+          btn.setAttribute("aria-expanded", String(open));
+          sidebar.setAttribute("aria-hidden", String(!open));
+          if (!open) btn.focus();
+        }
+
+        btn.addEventListener("click", toggle);
+        backdrop.addEventListener("click", toggle);
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && sidebar.classList.contains("open"))
+            toggle();
+        });
+      })();
+    </script>
   </body>
 </html>

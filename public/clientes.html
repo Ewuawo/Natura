@@ -2,7 +2,9 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- importante para mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins&display=swap"
       rel="stylesheet"
@@ -11,16 +13,35 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <aside class="sidebar">
-      <h1>Natura<br />Pauli</h1>
-      <nav>
-        <a href="index.html">Home</a>
-        <a href="productos.html">Productos</a>
-        <a class="active" href="clientes.html">Clientes</a>
-        <a href="ventas.html">Ventas</a>
-      </nav>
-    </aside>
+    <!-- Topbar fija con botón hamburguesa -->
+    <header class="topbar">
+      <button
+        class="hamburger"
+        id="btnMenu"
+        aria-label="Abrir menú"
+        aria-controls="sidebar"
+        aria-expanded="false"
+      >
+        <span></span><span></span><span></span>
+      </button>
+      <h1 class="brand">Natura Graciela</h1>
+    </header>
 
+    <!-- Sidebar: en desktop queda a la izquierda; en mobile es off-canvas -->
+    <nav id="sidebar" class="sidebar" aria-hidden="true">
+      <h1 style="margin: 0 0 8px 0; font-size: 20px; line-height: 1.1">
+        Natura<br />Graciela
+      </h1>
+      <a href="index.html">Home</a>
+      <a href="productos.html">Productos</a>
+      <a class="active" href="clientes.html">Clientes</a>
+      <a href="ventas.html">Ventas</a>
+    </nav>
+
+    <!-- Fondo para cerrar el menú en mobile -->
+    <div class="backdrop" id="backdrop"></div>
+
+    <!-- Contenido -->
     <main class="content">
       <h2 class="title">Clientes</h2>
 
@@ -42,22 +63,25 @@
           <button id="btnNuevoCliente">+ Nuevo</button>
         </div>
 
-        <table id="tbl-clientes">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Apellido</th>
-              <th>Teléfono</th>
-              <th>Email</th>
-              <th>Dirección</th>
-              <th>Ciudad</th>
-              <th>Notas</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <!-- tabla con scroll horizontal en pantallas chicas -->
+        <div class="table-responsive">
+          <table id="tbl-clientes">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Dirección</th>
+                <th>Ciudad</th>
+                <th>Notas</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
 
       <section class="card" id="boxCliente" style="display: none">
@@ -89,6 +113,33 @@
       </section>
     </main>
 
+    <!-- Tu lógica de clientes -->
     <script src="clientes.js"></script>
+
+    <!-- JS mínimo para abrir/cerrar el menú hamburguesa -->
+    <script>
+      (function () {
+        const btn = document.getElementById("btnMenu");
+        const sidebar = document.getElementById("sidebar");
+        const backdrop = document.getElementById("backdrop");
+        if (!btn || !sidebar || !backdrop) return;
+
+        function toggle() {
+          const open = sidebar.classList.toggle("open");
+          document.body.classList.toggle("no-scroll", open);
+          backdrop.classList.toggle("show", open);
+          btn.setAttribute("aria-expanded", String(open));
+          sidebar.setAttribute("aria-hidden", String(!open));
+          if (!open) btn.focus();
+        }
+
+        btn.addEventListener("click", toggle);
+        backdrop.addEventListener("click", toggle);
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && sidebar.classList.contains("open"))
+            toggle();
+        });
+      })();
+    </script>
   </body>
 </html>
