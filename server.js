@@ -66,14 +66,17 @@ function forceNoVerify(url) {
 
 const connectionString = forceNoVerify(process.env.DATABASE_URL);
 
+// Log de diagnóstico para ver a dónde nos conectamos si usamos connectionString
 try {
   const u = new URL(connectionString);
   console.log("DB host:", u.hostname, "port:", u.port);
-} catch (e) {
+} catch {
   console.log("No pude parsear DATABASE_URL");
 }
 
-// Opción segura con CA si la provees por env (PGSSL_CA=./supabase-ca.crt)
+// SSL:
+// - por defecto: no-verify (útil cuando no tenemos CA cargada)
+// - si seteás PGSSL_CA con ruta a tu .crt, valida con esa CA.
 let ssl = { rejectUnauthorized: false };
 if (process.env.PGSSL_CA) {
   ssl = {
@@ -81,10 +84,21 @@ if (process.env.PGSSL_CA) {
   };
 }
 
-const pool = new Pool({
-  connectionString,
-  ssl, // por defecto: no-verify; si seteás PGSSL_CA, valida con esa CA
-});
+// ⚠️ Forzamos el pooler si existen las variables PG* (preferido en Render)
+//    Si no existen, caemos al connectionString (también debería ser el del pooler).
+const pool = process.env.PGHOST
+  ? new Pool({
+      host: process.env.PGHOST, // ej: aws-1-sa-east-1.pooler.supabase.com
+      port: Number(process.env.PGPORT) || 6543, // 6543
+      user: process.env.PGUSER, // ej: postgres.xpqccnnckysrkwnddwct
+      password: process.env.PGPASSWORD, // tu password
+      database: process.env.PGDATABASE || "postgres", // postgres
+      ssl,
+    })
+  : new Pool({
+      connectionString,
+      ssl,
+    });
 
 // ---- HEALTHCHECK DB ----
 app.get("/health/db", async (_req, res) => {
