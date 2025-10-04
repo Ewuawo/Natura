@@ -53,19 +53,18 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 app.use(express.static(PUBLIC_DIR));
 app.get("/", (_req, res) => res.sendFile(path.join(PUBLIC_DIR, "index.html")));
 
-// ---- DB POOL (Supabase Postgres) ----
+/// ---- DB POOL (Supabase Postgres) ----
 
-// SSL (simple para pruebas; si usás CA, poné PGSSL_CA y cambia rejectUnauthorized)
+// SSL (simple para pruebas; si usás CA, usa PGSSL_CA y cambia abajo)
 let ssl = { rejectUnauthorized: false };
 if (process.env.PGSSL_CA) {
   const p = require("path").resolve(process.env.PGSSL_CA);
   ssl = { ca: fs.readFileSync(p, "utf8") };
 }
 
-// ✅ FORZAR POOLER vía variables PG* (ignora DATABASE_URL)
+// ✅ FORZAR pooler con variables PG* (ignoramos por completo DATABASE_URL)
 function mask(s) {
-  if (!s) return s;
-  return s.slice(0, 3) + "****";
+  return s ? s.slice(0, 3) + "****" : s;
 }
 console.log("PGHOST:", process.env.PGHOST);
 console.log("PGPORT:", process.env.PGPORT);
@@ -73,11 +72,11 @@ console.log("PGUSER:", process.env.PGUSER);
 console.log("PGDATABASE:", process.env.PGDATABASE);
 console.log("PGPASSWORD:", mask(process.env.PGPASSWORD));
 
-const pool = new Pool({
-  host: process.env.PGHOST, // aws-1-sa-east-1.pooler.supabase.com
+const pool = new (require("pg").Pool)({
+  host: process.env.PGHOST, // ej: aws-1-sa-east-1.pooler.supabase.com
   port: Number(process.env.PGPORT) || 6543,
-  user: process.env.PGUSER, // postgres.xpqccnnckysrkwnddwct
-  password: process.env.PGPASSWORD, // tu pass
+  user: process.env.PGUSER, // ej: postgres.xpqccnnckysrkwnddwct
+  password: process.env.PGPASSWORD,
   database: process.env.PGDATABASE || "postgres",
   ssl,
 });
