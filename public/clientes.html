@@ -17,14 +17,12 @@
     <header class="topbar">
       <button
         class="hamburger"
-        id="btnMenu"
         aria-label="Abrir menú"
-        aria-controls="sidebar"
-        aria-expanded="false"
+        onclick="document.body.classList.toggle('menu-open')"
       >
-        <span></span><span></span><span></span>
+        ☰
       </button>
-      <h1 class="brand">Natura Graciela</h1>
+      <div class="brand">Natura <span>Graciela</span></div>
     </header>
 
     <!-- Sidebar: en desktop queda a la izquierda; en mobile es off-canvas -->

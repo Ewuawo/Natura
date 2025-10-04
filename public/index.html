@@ -9,21 +9,19 @@
       rel="stylesheet"
     />
     <title>Inicio</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=3" />
   </head>
   <body>
     <!-- Topbar fija con botón hamburguesa -->
     <header class="topbar">
       <button
         class="hamburger"
-        id="btnMenu"
         aria-label="Abrir menú"
-        aria-controls="sidebar"
-        aria-expanded="false"
+        onclick="document.body.classList.toggle('menu-open')"
       >
-        <span></span><span></span><span></span>
+        ☰
       </button>
-      <h1 class="brand">Natura Graciela</h1>
+      <div class="brand">Natura <span>Graciela</span></div>
     </header>
 
     <!-- Sidebar: en desktop a la izquierda; en mobile off-canvas -->
