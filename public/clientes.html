@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins&display=swap"
+      rel="stylesheet"
+    />
+    <title>Clientes</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <h1>Natura<br />Pauli</h1>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="productos.html">Productos</a>
+        <a class="active" href="clientes.html">Clientes</a>
+        <a href="ventas.html">Ventas</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <h2 class="title">Clientes</h2>
+
+      <section class="card">
+        <div
+          style="
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+          "
+        >
+          <input
+            id="buscarClientes"
+            type="search"
+            placeholder="Buscar por nombre, apellido, teléfono o email"
+            style="flex: 1; padding: 8px"
+          />
+          <button id="btnNuevoCliente">+ Nuevo</button>
+        </div>
+
+        <table id="tbl-clientes">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Apellido</th>
+              <th>Teléfono</th>
+              <th>Email</th>
+              <th>Dirección</th>
+              <th>Ciudad</th>
+              <th>Notas</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section class="card" id="boxCliente" style="display: none">
+        <h3 id="formTitleCliente">Nuevo cliente</h3>
+        <form id="frmCliente">
+          <input type="hidden" name="id" />
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 12px;
+            "
+          >
+            <label>Nombre <input name="nombre" required /></label>
+            <label>Apellido <input name="apellido" /></label>
+            <label>Teléfono <input name="telefono" /></label>
+            <label>Email <input name="email" type="email" /></label>
+            <label>Dirección <input name="direccion" /></label>
+            <label>Ciudad <input name="ciudad" /></label>
+            <label style="grid-column: 1/-1"
+              >Notas <input name="notas"
+            /></label>
+          </div>
+          <div style="margin-top: 12px; display: flex; gap: 8px">
+            <button type="submit" id="btnGuardarCliente">Guardar</button>
+            <button type="button" id="btnCancelarCliente">Cancelar</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script src="clientes.js"></script>
+  </body>
+</html>
