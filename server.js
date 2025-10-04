@@ -55,50 +55,32 @@ app.get("/", (_req, res) => res.sendFile(path.join(PUBLIC_DIR, "index.html")));
 
 // ---- DB POOL (Supabase Postgres) ----
 
-// Fuerza "no-verify" en la URL por si viene con sslmode=require
-function forceNoVerify(url) {
-  if (!url) return url;
-  if (url.includes("sslmode=")) {
-    return url.replace(/sslmode=[^&]+/i, "sslmode=no-verify");
-  }
-  return url + (url.includes("?") ? "&" : "?") + "sslmode=no-verify";
-}
-
-const connectionString = forceNoVerify(process.env.DATABASE_URL);
-
-// Log de diagnóstico para ver a dónde nos conectamos si usamos connectionString
-try {
-  const u = new URL(connectionString);
-  console.log("DB host:", u.hostname, "port:", u.port);
-} catch {
-  console.log("No pude parsear DATABASE_URL");
-}
-
-// SSL:
-// - por defecto: no-verify (útil cuando no tenemos CA cargada)
-// - si seteás PGSSL_CA con ruta a tu .crt, valida con esa CA.
+// SSL (simple para pruebas; si usás CA, poné PGSSL_CA y cambia rejectUnauthorized)
 let ssl = { rejectUnauthorized: false };
 if (process.env.PGSSL_CA) {
-  ssl = {
-    ca: fs.readFileSync(require("path").resolve(process.env.PGSSL_CA), "utf8"),
-  };
+  const p = require("path").resolve(process.env.PGSSL_CA);
+  ssl = { ca: fs.readFileSync(p, "utf8") };
 }
 
-// ⚠️ Forzamos el pooler si existen las variables PG* (preferido en Render)
-//    Si no existen, caemos al connectionString (también debería ser el del pooler).
-const pool = process.env.PGHOST
-  ? new Pool({
-      host: process.env.PGHOST, // ej: aws-1-sa-east-1.pooler.supabase.com
-      port: Number(process.env.PGPORT) || 6543, // 6543
-      user: process.env.PGUSER, // ej: postgres.xpqccnnckysrkwnddwct
-      password: process.env.PGPASSWORD, // tu password
-      database: process.env.PGDATABASE || "postgres", // postgres
-      ssl,
-    })
-  : new Pool({
-      connectionString,
-      ssl,
-    });
+// ✅ FORZAR POOLER vía variables PG* (ignora DATABASE_URL)
+function mask(s) {
+  if (!s) return s;
+  return s.slice(0, 3) + "****";
+}
+console.log("PGHOST:", process.env.PGHOST);
+console.log("PGPORT:", process.env.PGPORT);
+console.log("PGUSER:", process.env.PGUSER);
+console.log("PGDATABASE:", process.env.PGDATABASE);
+console.log("PGPASSWORD:", mask(process.env.PGPASSWORD));
+
+const pool = new Pool({
+  host: process.env.PGHOST, // aws-1-sa-east-1.pooler.supabase.com
+  port: Number(process.env.PGPORT) || 6543,
+  user: process.env.PGUSER, // postgres.xpqccnnckysrkwnddwct
+  password: process.env.PGPASSWORD, // tu pass
+  database: process.env.PGDATABASE || "postgres",
+  ssl,
+});
 
 // ---- HEALTHCHECK DB ----
 app.get("/health/db", async (_req, res) => {
