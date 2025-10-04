@@ -66,6 +66,13 @@ function forceNoVerify(url) {
 
 const connectionString = forceNoVerify(process.env.DATABASE_URL);
 
+try {
+  const u = new URL(connectionString);
+  console.log("DB host:", u.hostname, "port:", u.port);
+} catch (e) {
+  console.log("No pude parsear DATABASE_URL");
+}
+
 // Opción segura con CA si la provees por env (PGSSL_CA=./supabase-ca.crt)
 let ssl = { rejectUnauthorized: false };
 if (process.env.PGSSL_CA) {
