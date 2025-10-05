@@ -204,11 +204,13 @@ function addItemRow() {
   const rowId = crypto.randomUUID
     ? crypto.randomUUID()
     : String(Date.now() + Math.random());
+
   const tr = document.createElement("tr");
   tr.dataset.rowid = rowId;
 
   const idxTd = cell(($$("#tbl-items tbody tr").length + 1).toString());
 
+  // ===== Columna producto =====
   const tdProd = document.createElement("td");
   const sel = document.createElement("select");
   sel.innerHTML =
@@ -216,103 +218,26 @@ function addItemRow() {
     state.productos
       .map(
         (p) =>
-          `<option value="${p.id}" data-precio="${p.precio}" data-stock="${
-            p.cantidad || 0
-          }">${p.nombre} (${p.marca})</option>`
+          `<option value="${p.id}" data-precio="${p.precio}" data-stock="${p.cantidad || 0}">
+            ${p.nombre} (${p.marca})
+          </option>`
       )
       .join("");
 
-  // Nota de stock (ya la podés tener, si no, queda acá)
   const stockNote = document.createElement("div");
   stockNote.className = "note";
   stockNote.textContent = "";
 
-  // NUEVO: ficha/detalle del producto elegido
   const detailNote = document.createElement("div");
   detailNote.className = "note";
   detailNote.style.opacity = "0.9";
   detailNote.style.fontSize = "12px";
   detailNote.style.marginTop = "4px";
-  detailNote.textContent = ""; // se completa al elegir producto
+  detailNote.textContent = "";
 
-  sel.onchange = () => {
-    const pid = Number(sel.value);
-    const p = state.productos.find((x) => x.id === pid);
-
-    // precio sugerido y stock desde las <option> (si ya venían)
-    const opt = sel.options[sel.selectedIndex];
-    const precioSugerido = Number(opt?.dataset?.precio || 0);
-    const stock = Number(opt?.dataset?.stock || 0);
-
-    // (si tenés un input de precio en la fila llamado inpPrecio, setealo aquí)
-    if (
-      !isNaN(precioSugerido) &&
-      precioSugerido > 0 &&
-      typeof inpPrecio !== "undefined"
-    ) {
-      inpPrecio.value = Number(precioSugerido).toFixed(2);
-    }
-
-    // pintar stock
-    if (stock <= 0) {
-      stockNote.textContent = "SIN STOCK";
-      stockNote.style.color = "#b71c1c";
-    } else {
-      stockNote.textContent = `Stock: ${stock}`;
-      stockNote.style.color = "#1b5e20";
-    }
-
-    // pintar detalle
-    if (p) {
-      const venceTxt = p.vencimiento
-        ? ` • Vence: ${formatDate ? formatDate(p.vencimiento) : p.vencimiento}`
-        : "";
-      detailNote.innerHTML = `<strong>${p.marca || "-"}</strong> — ${
-        p.detalle || "Sin detalle"
-      }${venceTxt} • Precio sug.: ${
-        money ? money(p.precio) : "$ " + Number(p.precio || 0).toFixed(2)
-      }`;
-    } else {
-      detailNote.textContent = "";
-    }
-
-    // si ya tenés validaciones/cálculos en tu fila, llamalos acá:
-    if (typeof validateQtyVsStock === "function") validateQtyVsStock();
-    if (typeof syncRow === "function") syncRow();
-    if (typeof recalcItems === "function") recalcItems();
-  };
-
-  // agregar al TD de producto
   tdProd.append(sel, stockNote, detailNote);
 
-  sel.onchange = () => {
-    const opt = sel.options[sel.selectedIndex];
-    const precioSugerido = Number(opt?.dataset?.precio || 0);
-    const stock = Number(opt?.dataset?.stock || 0);
-
-    if (!isNaN(precioSugerido) && precioSugerido > 0) {
-      inpPrecio.value = precioSugerido.toFixed(2);
-    }
-
-    // stock visible
-    if (stock <= 0) {
-      stockNote.textContent = "SIN STOCK";
-      stockNote.classList.remove("good");
-      stockNote.classList.add("bad");
-    } else {
-      stockNote.textContent = `Stock: ${stock}`;
-      stockNote.classList.remove("bad");
-      stockNote.classList.add("good");
-    }
-
-    // si cantidad supera stock, marca error
-    validateQtyVsStock();
-    syncRow();
-    recalcItems();
-  };
-
-  tdProd.append(sel, stockNote);
-
+  // ===== Columna cantidad =====
   const tdCant = document.createElement("td");
   const inpCant = document.createElement("input");
   inpCant.type = "number";
@@ -326,6 +251,7 @@ function addItemRow() {
   };
   tdCant.append(inpCant);
 
+  // ===== Columna precio unitario =====
   const tdPrecio = document.createElement("td");
   const inpPrecio = document.createElement("input");
   inpPrecio.type = "number";
@@ -338,6 +264,7 @@ function addItemRow() {
   };
   tdPrecio.append(inpPrecio);
 
+  // ===== Subtotal y eliminar =====
   const tdSub = document.createElement("td");
   tdSub.textContent = money(0);
 
@@ -350,8 +277,55 @@ function addItemRow() {
   });
   tdDel.append(bDel);
 
+  // ===== Un único onchange =====
+  sel.onchange = () => {
+    const opt = sel.options[sel.selectedIndex];
+    const precioSugerido = Number(opt?.dataset?.precio || 0);
+    const stock = Number(opt?.dataset?.stock || 0);
+    const pid = Number(sel.value);
+    const p = state.productos.find((x) => x.id === pid);
+
+    // Precio sugerido
+    if (!isNaN(precioSugerido) && precioSugerido > 0) {
+      inpPrecio.value = precioSugerido.toFixed(2);
+    }
+
+    // Stock
+    if (stock <= 0) {
+      stockNote.textContent = "SIN STOCK";
+      stockNote.classList.remove("good");
+      stockNote.classList.add("bad");
+      stockNote.style.color = "#b71c1c";
+    } else {
+      stockNote.textContent = `Stock: ${stock}`;
+      stockNote.classList.remove("bad");
+      stockNote.classList.add("good");
+      stockNote.style.color = "#1b5e20";
+    }
+
+    // Detalle
+    if (p) {
+      const venceTxt = p.vencimiento
+        ? ` • Vence: ${typeof formatDate === "function" ? formatDate(p.vencimiento) : p.vencimiento}`
+        : "";
+      detailNote.innerHTML =
+        `<strong>${p.marca || "-"}</strong> — ${p.detalle || "Sin detalle"}${venceTxt} • Precio sug.: ${
+          typeof money === "function" ? money(p.precio) : "$ " + Number(p.precio || 0).toFixed(2)
+        }`;
+    } else {
+      detailNote.textContent = "";
+    }
+
+    // Validaciones / cálculos existentes
+    if (typeof validateQtyVsStock === "function") validateQtyVsStock();
+    if (typeof syncRow === "function") syncRow();
+    if (typeof recalcItems === "function") recalcItems();
+  };
+
   tr.append(idxTd, tdProd, tdCant, tdPrecio, tdSub, tdDel);
   ui.tblItemsBody.append(tr);
+}
+
 
   function currentStock() {
     const opt = sel.options[sel.selectedIndex];
