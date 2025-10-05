@@ -210,7 +210,7 @@ function addItemRow() {
 
   const idxTd = cell(($$("#tbl-items tbody tr").length + 1).toString());
 
-  // ===== Columna producto =====
+  // ==== Columna producto
   const tdProd = document.createElement("td");
   const sel = document.createElement("select");
   sel.innerHTML =
@@ -230,6 +230,7 @@ function addItemRow() {
   stockNote.className = "note";
   stockNote.textContent = "";
 
+  // --- NUEVO: detalle del producto
   const detailNote = document.createElement("div");
   detailNote.className = "note";
   detailNote.style.opacity = "0.9";
@@ -239,34 +240,25 @@ function addItemRow() {
 
   tdProd.append(sel, stockNote, detailNote);
 
-  // ===== Columna cantidad =====
+  // ==== Columna cantidad
   const tdCant = document.createElement("td");
   const inpCant = document.createElement("input");
   inpCant.type = "number";
   inpCant.min = "1";
   inpCant.step = "1";
   inpCant.value = "1";
-  inpCant.oninput = () => {
-    validateQtyVsStock();
-    syncRow();
-    recalcItems();
-  };
   tdCant.append(inpCant);
 
-  // ===== Columna precio unitario =====
+  // ==== Columna precio unitario
   const tdPrecio = document.createElement("td");
   const inpPrecio = document.createElement("input");
   inpPrecio.type = "number";
   inpPrecio.min = "0";
   inpPrecio.step = "0.01";
   inpPrecio.value = "0";
-  inpPrecio.oninput = () => {
-    syncRow();
-    recalcItems();
-  };
   tdPrecio.append(inpPrecio);
 
-  // ===== Subtotal y eliminar =====
+  // ==== Subtotal y eliminar
   const tdSub = document.createElement("td");
   tdSub.textContent = money(0);
 
@@ -279,15 +271,27 @@ function addItemRow() {
   });
   tdDel.append(bDel);
 
-  // ===== Un único onchange =====
+  // ==== Función que sincroniza la fila (DEBE estar dentro)
+  function syncRow() {
+    const productoId = Number(sel.value) || null;
+    const cantidad = Number(inpCant.value) || 0;
+    const precioUnit = Number(inpPrecio.value) || 0;
+    const subtotal = cantidad * precioUnit;
+
+    tdSub.textContent = money(subtotal);
+
+    const idx = state.itemsForm.findIndex((x) => x.id === rowId);
+    const row = { id: rowId, productoId, cantidad, precioUnit };
+    if (idx === -1) state.itemsForm.push(row);
+    else state.itemsForm[idx] = row;
+  }
+
+  // ==== Handlers (un solo onchange)
   sel.onchange = () => {
     const opt = sel.options[sel.selectedIndex];
     const precioSugerido = Number(opt?.dataset?.precio || 0);
     const stock = Number(opt?.dataset?.stock || 0);
-    const pid = Number(sel.value);
-    const p = state.productos.find((x) => x.id === pid);
 
-    // Precio sugerido
     if (!isNaN(precioSugerido) && precioSugerido > 0) {
       inpPrecio.value = precioSugerido.toFixed(2);
     }
@@ -306,6 +310,8 @@ function addItemRow() {
     }
 
     // Detalle
+    const pid = Number(sel.value);
+    const p = state.productos.find((x) => x.id === pid);
     if (p) {
       const venceTxt = p.vencimiento
         ? ` • Vence: ${
@@ -325,14 +331,30 @@ function addItemRow() {
       detailNote.textContent = "";
     }
 
-    // Validaciones / cálculos existentes
+    // Validaciones y sincronización
     if (typeof validateQtyVsStock === "function") validateQtyVsStock();
-    if (typeof syncRow === "function") syncRow();
+    syncRow();
     if (typeof recalcItems === "function") recalcItems();
   };
 
+  inpCant.oninput = () => {
+    if (typeof validateQtyVsStock === "function") validateQtyVsStock();
+    syncRow();
+    if (typeof recalcItems === "function") recalcItems();
+  };
+
+  inpPrecio.oninput = () => {
+    syncRow();
+    if (typeof recalcItems === "function") recalcItems();
+  };
+
+  // ==== Pintar la fila y disparar cálculos iniciales
   tr.append(idxTd, tdProd, tdCant, tdPrecio, tdSub, tdDel);
   ui.tblItemsBody.append(tr);
+
+  // ¡Ahora sí! con todo creado y handlers listos:
+  sel.dispatchEvent(new Event("change"));
+  inpCant.dispatchEvent(new Event("input"));
 }
 
 function currentStock() {
