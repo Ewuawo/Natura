@@ -14,10 +14,9 @@ const ui = {
   frmVenta: $("#frmVenta"),
   btnCancelarVenta: $("#btnCancelarVenta"),
   tblItemsBody: $("#tbl-items tbody"),
+  tblCuotasBody: $("#tbl-det-cuotas tbody"),
   btnAddItem: $("#btnAddItem"),
-  boxCredito: $("#boxCredito"),
-  btnGenerarCuotas: $("#btnGenerarCuotas"),
-  tblCuotasBody: $("#tbl-cuotas tbody"),
+
   sumItems: $("#sumItems"),
   sumInteres: $("#sumInteres"),
   sumTotalConInteres: $("#sumTotalConInteres"),
@@ -25,33 +24,50 @@ const ui = {
 
   // detalle
   boxDetalle: $("#boxDetalle"),
-  btnCerrarDetalle: $("#btnCerrarDetalle"),
   ventaCab: $("#ventaCab"),
   detItemsBody: $("#tbl-det-items tbody"),
   detCuotasBody: $("#tbl-det-cuotas tbody"),
-  detPagosBody: $("#tbl-det-pagos tbody"),
-  bloqueCuotas: $("#bloqueCuotas"),
 
   // pago
   boxPago: $("#boxPago"),
   frmPago: $("#frmPago"),
-  btnCancelarPago: $("#btnCancelarPago"),
 };
 
 const state = {
   ventas: [],
-  filter: "",
   clientes: [],
   productos: [],
-  itemsForm: [], // [{id: rowId, productoId, cantidad, precioUnit}]
-  cuotasForm: [], // [{nro, venceEl, monto}]
+  filter: "",
+  // formularios
+  itemsForm: [],
+  cuotasForm: [],
   detalleVentaId: null,
 };
 
 // ==================== Utils ====================
-function money(n) {
-  const v = Number(n || 0);
-  return v.toLocaleString("es-AR", { style: "currency", currency: "ARS" });
+function text(t) {
+  return document.createTextNode(String(t ?? ""));
+}
+function cell(t) {
+  const td = document.createElement("td");
+  td.textContent = String(t ?? "");
+  return td;
+}
+function btn(label, cls, onClick) {
+  const b = document.createElement("button");
+  b.textContent = label;
+  if (cls) b.className = cls;
+  if (onClick) b.addEventListener("click", onClick);
+  return b;
+}
+function money(v) {
+  const n = Number(v || 0);
+  return n.toLocaleString("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 function toInputDate(v) {
   const d = v ? new Date(v) : new Date();
@@ -83,10 +99,6 @@ function formatDate(v) {
   if (!isNaN(d)) return d.toLocaleDateString("es-AR");
   const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v);
-}
-// === NUEVO === mostrar botón solo si es crédito y hay saldo
-function puedeRegistrarPago(v) {
-  return String(v.tipoPago) === "Credito" && Number(v.saldo) > 0;
 }
 
 // ==================== Carga base ====================
@@ -126,11 +138,11 @@ function renderListado() {
     tr.append(cell(money(v.saldo)));
     tr.append(cell(`${Number(v.interes || 0).toFixed(2)}%`));
 
-    // === MODIFICADO: acciones condicionadas
     const acc = document.createElement("td");
     acc.style.whiteSpace = "nowrap";
     const bDet = btn("Detalle", "btn btn-sm", () => openDetalle(v.id));
     acc.append(bDet);
+
     if (puedeRegistrarPago(v)) {
       acc.append(text(" "));
       const bPay = btn("Registrar pago", "btn btn-sm", () => openPago(v.id));
@@ -142,56 +154,51 @@ function renderListado() {
   });
   ui.ventasCount.textContent = `${filtered.length} venta(s)`;
 }
-function cell(t) {
-  const td = document.createElement("td");
-  td.textContent = t ?? "";
-  return td;
-}
-function btn(txt, cls, onClick) {
-  const b = document.createElement("button");
-  b.textContent = txt;
-  b.className = cls;
-  b.onclick = onClick;
-  return b;
-}
-function text(t) {
-  return document.createTextNode(t);
+function puedeRegistrarPago(v) {
+  const credito = String(v.tipoPago || "").toLowerCase() === "credito";
+  const saldo = Number(v.saldo || 0) > 0;
+  return credito && saldo;
 }
 
 // ==================== Nueva venta ====================
+ui.btnNueva?.addEventListener("click", openNueva);
+ui.btnCancelarVenta?.addEventListener("click", closeNueva);
+ui.btnAddItem?.addEventListener("click", addItemRow);
+
 function openNueva() {
-  state.itemsForm = [];
-  state.cuotasForm = [];
+  // limpia form
   ui.tblItemsBody.innerHTML = "";
   ui.tblCuotasBody.innerHTML = "";
-  ui.sumItems.textContent = money(0);
-  ui.sumInteres.textContent = "";
-  ui.sumTotalConInteres.textContent = "";
+  state.itemsForm = [];
+  state.cuotasForm = [];
 
-  // fecha hoy
+  // fecha default
   ui.frmVenta.fecha.value = toInputDate(new Date());
+
   // clientes
-  const sel = ui.frmVenta.clienteId;
-  sel.innerHTML =
+  const selCliente = ui.frmVenta.clienteId;
+  selCliente.innerHTML =
     `<option value="">Elegir...</option>` +
     state.clientes
       .map(
         (c) =>
           `<option value="${c.id}">${
-            (c.apellido ? c.apellido + ", " : "") + c.nombre
+            (c.apellido ? c.apellido + ", " : "") + (c.nombre || "")
           }</option>`
       )
       .join("");
 
-  // tipo pago
+  // valores por defecto
   ui.frmVenta.tipoPago.value = "Contado";
-  ui.boxCredito.style.display = "none";
-  ui.frmVenta.interes.value = 0;
-  ui.frmVenta.cantidadCuotas.value = 3;
+  ui.frmVenta.interes.value = "0";
+  ui.frmVenta.cantCuotas.value = "1";
   ui.frmVenta.primerVencimiento.value = toInputDate(new Date());
 
-  addItemRow(); // 1 fila por defecto
-  recalcItems();
+  // muestra/oculta bloque de cuotas
+  toggleBloqueCuotas();
+
+  // primera fila
+  addItemRow();
 
   ui.boxNueva.style.display = "block";
   ui.boxNueva.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -210,7 +217,7 @@ function addItemRow() {
 
   const idxTd = cell(($$("#tbl-items tbody tr").length + 1).toString());
 
-  // ==== Columna producto
+  // === Producto
   const tdProd = document.createElement("td");
   const sel = document.createElement("select");
   sel.innerHTML =
@@ -221,7 +228,7 @@ function addItemRow() {
           `<option value="${p.id}" data-precio="${p.precio}" data-stock="${
             p.cantidad || 0
           }">
-            ${p.nombre} (${p.marca})
+            ${p.nombre} (${p.marca || ""})
           </option>`
       )
       .join("");
@@ -230,7 +237,7 @@ function addItemRow() {
   stockNote.className = "note";
   stockNote.textContent = "";
 
-  // --- NUEVO: detalle del producto
+  // mini ficha del producto
   const detailNote = document.createElement("div");
   detailNote.className = "note";
   detailNote.style.opacity = "0.9";
@@ -240,7 +247,7 @@ function addItemRow() {
 
   tdProd.append(sel, stockNote, detailNote);
 
-  // ==== Columna cantidad
+  // === Cantidad
   const tdCant = document.createElement("td");
   const inpCant = document.createElement("input");
   inpCant.type = "number";
@@ -249,7 +256,7 @@ function addItemRow() {
   inpCant.value = "1";
   tdCant.append(inpCant);
 
-  // ==== Columna precio unitario
+  // === Precio unitario
   const tdPrecio = document.createElement("td");
   const inpPrecio = document.createElement("input");
   inpPrecio.type = "number";
@@ -258,7 +265,7 @@ function addItemRow() {
   inpPrecio.value = "0";
   tdPrecio.append(inpPrecio);
 
-  // ==== Subtotal y eliminar
+  // === Subtotal y eliminar
   const tdSub = document.createElement("td");
   tdSub.textContent = money(0);
 
@@ -271,13 +278,39 @@ function addItemRow() {
   });
   tdDel.append(bDel);
 
-  // ==== Función que sincroniza la fila (DEBE estar dentro)
+  // ==== helpers de la fila
+  function currentStock() {
+    const opt = sel.options[sel.selectedIndex];
+    return Number(opt?.dataset?.stock || 0);
+  }
+  function validateQtyVsStock() {
+    const stock = currentStock();
+    const qty = Number(inpCant.value || 0);
+    if (stock >= 0 && qty > stock) {
+      inpCant.classList.add("input-bad");
+      stockNote.classList.add("bad");
+      if (!stockNote.textContent.includes("•")) {
+        stockNote.textContent += " • Cantidad supera el stock";
+      }
+    } else {
+      inpCant.classList.remove("input-bad");
+      // restaurar texto base
+      const st = currentStock();
+      if (st <= 0) {
+        stockNote.textContent = "SIN STOCK";
+        stockNote.classList.add("bad");
+      } else {
+        stockNote.textContent = `Stock: ${st}`;
+        stockNote.classList.remove("bad");
+        stockNote.classList.add("good");
+      }
+    }
+  }
   function syncRow() {
     const productoId = Number(sel.value) || null;
     const cantidad = Number(inpCant.value) || 0;
     const precioUnit = Number(inpPrecio.value) || 0;
     const subtotal = cantidad * precioUnit;
-
     tdSub.textContent = money(subtotal);
 
     const idx = state.itemsForm.findIndex((x) => x.id === rowId);
@@ -286,7 +319,7 @@ function addItemRow() {
     else state.itemsForm[idx] = row;
   }
 
-  // ==== Handlers (un solo onchange)
+  // === event handlers (un solo onchange)
   sel.onchange = () => {
     const opt = sel.options[sel.selectedIndex];
     const precioSugerido = Number(opt?.dataset?.precio || 0);
@@ -296,7 +329,7 @@ function addItemRow() {
       inpPrecio.value = precioSugerido.toFixed(2);
     }
 
-    // Stock
+    // stock
     if (stock <= 0) {
       stockNote.textContent = "SIN STOCK";
       stockNote.classList.remove("good");
@@ -309,7 +342,7 @@ function addItemRow() {
       stockNote.style.color = "#1b5e20";
     }
 
-    // Detalle
+    // detalle
     const pid = Number(sel.value);
     const p = state.productos.find((x) => x.id === pid);
     if (p) {
@@ -331,122 +364,60 @@ function addItemRow() {
       detailNote.textContent = "";
     }
 
-    // Validaciones y sincronización
-    if (typeof validateQtyVsStock === "function") validateQtyVsStock();
+    validateQtyVsStock();
     syncRow();
-    if (typeof recalcItems === "function") recalcItems();
+    recalcItems();
   };
 
   inpCant.oninput = () => {
-    if (typeof validateQtyVsStock === "function") validateQtyVsStock();
+    validateQtyVsStock();
     syncRow();
-    if (typeof recalcItems === "function") recalcItems();
+    recalcItems();
   };
-
   inpPrecio.oninput = () => {
     syncRow();
-    if (typeof recalcItems === "function") recalcItems();
+    recalcItems();
   };
 
-  // ==== Pintar la fila y disparar cálculos iniciales
+  // montar fila
   tr.append(idxTd, tdProd, tdCant, tdPrecio, tdSub, tdDel);
   ui.tblItemsBody.append(tr);
 
-  // ¡Ahora sí! con todo creado y handlers listos:
+  // disparar inicial
   sel.dispatchEvent(new Event("change"));
   inpCant.dispatchEvent(new Event("input"));
 }
 
-function currentStock() {
-  const opt = sel.options[sel.selectedIndex];
-  return Number(opt?.dataset?.stock || 0);
-}
-function validateQtyVsStock() {
-  const stock = currentStock();
-  const qty = Number(inpCant.value || 0);
-  if (stock >= 0 && qty > stock) {
-    inpCant.classList.add("input-bad");
-    stockNote.classList.add("bad");
-    if (!stockNote.textContent.includes("•")) {
-      stockNote.textContent += " • Cantidad supera el stock";
-    }
-  } else {
-    inpCant.classList.remove("input-bad");
-    // restaura texto base (SIN STOCK / Stock: N)
-    const opt = sel.options[sel.selectedIndex];
-    const st = Number(opt?.dataset?.stock || 0);
-    if (st <= 0) {
-      stockNote.textContent = "SIN STOCK";
-      stockNote.classList.add("bad");
-    } else {
-      stockNote.textContent = `Stock: ${st}`;
-      stockNote.classList.remove("bad");
-      stockNote.classList.add("good");
-    }
-  }
-}
-
-function syncRow() {
-  const productoId = Number(sel.value) || null;
-  const cantidad = Number(inpCant.value) || 0;
-  const precioUnit = Number(inpPrecio.value) || 0;
-  const subtotal = cantidad * precioUnit;
-  tdSub.textContent = money(subtotal);
-
-  const idx = state.itemsForm.findIndex((x) => x.id === rowId);
-  const row = { id: rowId, productoId, cantidad, precioUnit };
-  if (idx === -1) state.itemsForm.push(row);
-  else state.itemsForm[idx] = row;
-}
-
-// init state row
-sel.dispatchEvent(new Event("change"));
-inpCant.dispatchEvent(new Event("input"));
-
+// renumera filas al borrar
 function renumerarItems() {
   $$("#tbl-items tbody tr").forEach(
     (tr, i) => (tr.firstChild.textContent = i + 1)
   );
 }
 
-function recalcItems() {
-  const totalItems = sum(
-    state.itemsForm,
-    (r) => (r.cantidad || 0) * (r.precioUnit || 0)
-  );
-  ui.sumItems.textContent = money(totalItems);
-
+// recálculos y cuotas
+function toggleBloqueCuotas() {
   const tipo = ui.frmVenta.tipoPago.value;
-  const interesPct = Number(ui.frmVenta.interes.value || 0);
-  if (tipo === "Credito") {
-    const tci = +(totalItems + (totalItems * interesPct) / 100).toFixed(2);
-    ui.sumInteres.textContent = `Interés: ${interesPct.toFixed(2)}%`;
-    ui.sumTotalConInteres.textContent = `Total con interés: ${money(tci)}`;
-
-    const totalCuotas = sum(state.cuotasForm, (c) => c.monto || 0);
-    ui.sumCuotas.textContent = money(totalCuotas);
-  } else {
-    ui.sumInteres.textContent = "";
-    ui.sumTotalConInteres.textContent = "";
-    ui.sumCuotas.textContent = money(0);
-  }
+  const show = tipo === "Credito";
+  $("#bloqueCuotas").style.display = show ? "" : "none";
 }
-
-// eventos de tipoPago
-ui.frmVenta?.tipoPago?.addEventListener("change", () => {
-  const tipo = ui.frmVenta.tipoPago.value;
-  ui.boxCredito.style.display = tipo === "Credito" ? "block" : "none";
+ui.frmVenta?.tipoPago.addEventListener("change", () => {
+  toggleBloqueCuotas();
   recalcItems();
 });
 
-// generar cuotas
-ui.btnGenerarCuotas?.addEventListener("click", () => {
-  const n = Math.max(1, Number(ui.frmVenta.cantidadCuotas.value || 1));
-  const interes = Number(ui.frmVenta.interes.value || 0);
+ui.frmVenta?.interes.addEventListener("input", () => {
+  recalcItems();
+});
+ui.frmVenta?.cantCuotas.addEventListener("input", () => {
+  if (ui.frmVenta.tipoPago.value !== "Credito") return;
+  const n = Math.max(1, Number(ui.frmVenta.cantCuotas.value || 1));
+
   const totalItems = sum(
     state.itemsForm,
     (r) => (r.cantidad || 0) * (r.precioUnit || 0)
   );
+  const interes = Number(ui.frmVenta.interes.value || 0);
   const totalConInteres = +(totalItems + (totalItems * interes) / 100).toFixed(
     2
   );
@@ -477,39 +448,62 @@ function pushCuotaRow(c) {
   const tr = document.createElement("tr");
   const tdNro = cell(c.nro);
   const tdVto = document.createElement("td");
-  const inpVto = document.createElement("input");
-  inpVto.type = "date";
-  inpVto.value = c.venceEl || toInputDate(new Date());
-  inpVto.oninput = () => {
-    const idx = state.cuotasForm.findIndex((x) => x.nro === c.nro);
-    if (idx !== -1) state.cuotasForm[idx].venceEl = inpVto.value;
+  const vto = document.createElement("input");
+  vto.type = "date";
+  vto.value = c.venceEl || toInputDate(new Date());
+  vto.oninput = () => {
+    const i = state.cuotasForm.findIndex((x) => x.nro === c.nro);
+    if (i !== -1) state.cuotasForm[i].venceEl = vto.value;
   };
-  tdVto.append(inpVto);
+  tdVto.append(vto);
 
   const tdMonto = document.createElement("td");
-  const inpMonto = document.createElement("input");
-  inpMonto.type = "number";
-  inpMonto.min = "0";
-  inpMonto.step = "0.01";
-  inpMonto.value = (c.monto || 0).toFixed(2);
-  inpMonto.oninput = () => {
-    const idx = state.cuotasForm.findIndex((x) => x.nro === c.nro);
-    if (idx !== -1) state.cuotasForm[idx].monto = Number(inpMonto.value || 0);
-    ui.sumCuotas.textContent = money(sum(state.cuotasForm, (x) => x.monto));
+  const m = document.createElement("input");
+  m.type = "number";
+  m.min = "0";
+  m.step = "0.01";
+  m.value = String(c.monto || 0);
+  m.oninput = () => {
+    const i = state.cuotasForm.findIndex((x) => x.nro === c.nro);
+    if (i !== -1) state.cuotasForm[i].monto = Number(m.value || 0);
+    recalcItems();
   };
-  tdMonto.append(inpMonto);
+  tdMonto.append(m);
 
   const tdDel = document.createElement("td");
   const bDel = btn("X", "btn btn-sm btn-danger", () => {
     const i = state.cuotasForm.findIndex((x) => x.nro === c.nro);
     if (i !== -1) state.cuotasForm.splice(i, 1);
     tr.remove();
-    ui.sumCuotas.textContent = money(sum(state.cuotasForm, (x) => x.monto));
+    recalcItems();
   });
   tdDel.append(bDel);
 
   tr.append(tdNro, tdVto, tdMonto, tdDel);
   ui.tblCuotasBody.append(tr);
+}
+
+function recalcItems() {
+  const totalItems = sum(
+    state.itemsForm,
+    (r) => (r.cantidad || 0) * (r.precioUnit || 0)
+  );
+  ui.sumItems.textContent = money(totalItems);
+
+  const tipo = ui.frmVenta.tipoPago.value;
+  const interesPct = Number(ui.frmVenta.interes.value || 0);
+  if (tipo === "Credito") {
+    const tci = +(totalItems + (totalItems * interesPct) / 100).toFixed(2);
+    ui.sumInteres.textContent = `Interés: ${interesPct.toFixed(2)}%`;
+    ui.sumTotalConInteres.textContent = `Total con interés: ${money(tci)}`;
+
+    const totalCuotas = sum(state.cuotasForm, (c) => c.monto || 0);
+    ui.sumCuotas.textContent = money(totalCuotas);
+  } else {
+    ui.sumInteres.textContent = "";
+    ui.sumTotalConInteres.textContent = "";
+    ui.sumCuotas.textContent = money(0);
+  }
 }
 
 // submit nueva venta
@@ -523,30 +517,21 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
     tipoPago: f.tipoPago.value,
     interes: Number(f.interes?.value || 0),
     items: state.itemsForm
-      .filter((r) => r.productoId && r.cantidad > 0 && r.precioUnit >= 0)
+      .filter((r) => r.productoId && r.cantidad > 0)
       .map((r) => ({
         productoId: r.productoId,
         cantidad: r.cantidad,
         precioUnit: r.precioUnit,
       })),
+    cuotas:
+      f.tipoPago.value === "Credito"
+        ? state.cuotasForm.map((c) => ({
+            nro: c.nro,
+            venceEl: c.venceEl,
+            monto: c.monto,
+          }))
+        : [],
   };
-
-  if (!payload.clienteId || payload.items.length === 0) {
-    alert("Elegí un cliente y agregá al menos un item.");
-    return;
-  }
-
-  if (payload.tipoPago === "Credito") {
-    if (state.cuotasForm.length === 0) {
-      alert("Generá o cargá cuotas para crédito.");
-      return;
-    }
-    payload.cuotas = state.cuotasForm.map((c) => ({
-      nro: c.nro,
-      venceEl: c.venceEl,
-      monto: Number(c.monto),
-    }));
-  }
 
   try {
     const r = await fetch("/api/ventas", {
@@ -554,30 +539,24 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const data = await r.json().catch(() => ({}));
     if (!r.ok) {
-      console.error("POST /api/ventas", r.status, data);
-      alert(data?.error || "No se pudo crear la venta");
+      const t = await r.text();
+      alert("No se pudo guardar la venta: " + t);
       return;
     }
-    closeNueva();
+    ui.boxNueva.style.display = "none";
     await refreshVentas();
-    if (data?.ventaId) {
-      openDetalle(data.ventaId);
-    }
   } catch (e) {
     console.error(e);
-    alert("Error de red guardando venta");
+    alert("Error de red guardando la venta");
   }
 });
 
-ui.btnAddItem?.addEventListener("click", addItemRow);
-ui.btnNueva?.addEventListener("click", openNueva);
-ui.btnCancelarVenta?.addEventListener("click", closeNueva);
-
-// ==================== Detalle de venta ====================
+// ==================== Detalle ====================
 async function openDetalle(id) {
   state.detalleVentaId = id;
+  ui.boxDetalle.style.display = "block";
+
   try {
     const r = await fetch(`/api/ventas/${id}`);
     if (!r.ok) {
@@ -615,114 +594,51 @@ async function openDetalle(id) {
       ui.detItemsBody.append(tr);
     });
 
-    // cuotas + pagos si es crédito
-    const esCredito = String(v.tipoPago).toLowerCase() === "credito";
-    ui.bloqueCuotas.style.display = esCredito ? "block" : "none";
+    // cuotas
     ui.detCuotasBody.innerHTML = "";
-    ui.detPagosBody.innerHTML = "";
-
-    if (esCredito) {
-      det.cuotas.forEach((c) => {
-        const tr = document.createElement("tr");
-        tr.append(
-          cell(c.nro),
-          cell(formatDate(c.venceEl)),
-          cell(money(c.monto)),
-          cell(money(c.pagado)),
-          cell(money(c.saldo))
-        );
-        ui.detCuotasBody.append(tr);
-      });
-
-      det.pagos.forEach((p, i) => {
-        const tr = document.createElement("tr");
-        tr.append(
-          cell(i + 1),
-          cell(formatDate(p.fecha)),
-          cell(money(p.monto)),
-          cell(p.cuotaId ? `#${p.cuotaId}` : "-")
-        );
-        ui.detPagosBody.append(tr);
-      });
-    }
-
-    ui.boxDetalle.style.display = "block";
-    ui.boxDetalle.scrollIntoView({ behavior: "smooth", block: "start" });
+    det.cuotas.forEach((c) => {
+      const tr = document.createElement("tr");
+      const saldo = Number(c.saldo || 0);
+      tr.append(
+        cell(c.nro),
+        cell(formatDate(c.venceEl)),
+        cell(money(c.monto)),
+        cell(money(c.pagado)),
+        cell(money(c.saldo))
+      );
+      ui.detCuotasBody.append(tr);
+    });
   } catch (e) {
     console.error(e);
     alert("Error de red cargando detalle");
   }
 }
-ui.btnCerrarDetalle?.addEventListener("click", () => {
-  ui.boxDetalle.style.display = "none";
-  state.detalleVentaId = null;
-});
 
 // ==================== Pago ====================
-// === MODIFICADO: bloquea apertura si no corresponde
 function openPago(ventaId) {
-  const venta = state.ventas.find((v) => v.id === ventaId);
-  if (!venta) {
-    alert("Venta no encontrada");
-    return;
-  }
-  if (!puedeRegistrarPago(venta)) {
-    alert("Esta venta no admite pagos (es contado o ya no tiene saldo).");
-    return;
-  }
-
-  state.detalleVentaId = ventaId;
-  ui.frmPago.ventaId.value = ventaId;
-  ui.frmPago.monto.value = "";
-  ui.frmPago.fecha.value = toInputDate(new Date());
   ui.boxPago.style.display = "block";
-  ui.boxPago.scrollIntoView({ behavior: "smooth", block: "start" });
+  ui.frmPago.ventaId.value = String(ventaId || "");
+  ui.frmPago.fecha.value = toInputDate(new Date());
 }
-
-ui.btnCancelarPago?.addEventListener(
-  "click",
-  () => (ui.boxPago.style.display = "none")
-);
-
-// === MODIFICADO: valida monto <= saldo antes de enviar
 ui.frmPago?.addEventListener("submit", async (ev) => {
   ev.preventDefault();
-  const f = ui.frmPago.elements;
-  const ventaId = Number(f.ventaId.value);
-  const payload = {
-    monto: Number(f.monto.value || 0),
-    fecha: f.fecha.value || toInputDate(new Date()),
-  };
-  if (!(ventaId > 0) || !(payload.monto > 0)) {
-    alert("Ingresá un monto válido.");
-    return;
-  }
+  const b = ui.frmPago.elements;
 
-  // Validaciones front extra
-  const venta = state.ventas.find((v) => v.id === ventaId);
-  if (!venta) {
-    alert("Venta no encontrada");
-    return;
-  }
-  if (!puedeRegistrarPago(venta)) {
-    alert("Esta venta no admite pagos (es contado o ya no tiene saldo).");
-    return;
-  }
-  if (payload.monto > Number(venta.saldo || 0)) {
-    alert(`El monto supera el saldo ($ ${Number(venta.saldo).toFixed(2)})`);
-    return;
-  }
+  const payload = {
+    ventaId: Number(b.ventaId.value),
+    fecha: b.fecha.value || toInputDate(new Date()),
+    monto: Number(b.monto.value || 0),
+  };
 
   try {
-    const r = await fetch(`/api/ventas/${ventaId}/pagos`, {
+    const r = await fetch("/api/pagos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const data = await r.json().catch(() => ({}));
     if (!r.ok) {
-      console.error("POST /api/ventas/:id/pagos", r.status, data);
-      alert(data?.error || "No se pudo aplicar el pago");
+      const t = await r.text();
+      alert("No se pudo registrar el pago: " + t);
       return;
     }
     ui.boxPago.style.display = "none";
