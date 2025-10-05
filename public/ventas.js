@@ -222,10 +222,68 @@ function addItemRow() {
       )
       .join("");
 
-  // nota de stock
+  // Nota de stock (ya la podés tener, si no, queda acá)
   const stockNote = document.createElement("div");
   stockNote.className = "note";
   stockNote.textContent = "";
+
+  // NUEVO: ficha/detalle del producto elegido
+  const detailNote = document.createElement("div");
+  detailNote.className = "note";
+  detailNote.style.opacity = "0.9";
+  detailNote.style.fontSize = "12px";
+  detailNote.style.marginTop = "4px";
+  detailNote.textContent = ""; // se completa al elegir producto
+
+  sel.onchange = () => {
+    const pid = Number(sel.value);
+    const p = state.productos.find((x) => x.id === pid);
+
+    // precio sugerido y stock desde las <option> (si ya venían)
+    const opt = sel.options[sel.selectedIndex];
+    const precioSugerido = Number(opt?.dataset?.precio || 0);
+    const stock = Number(opt?.dataset?.stock || 0);
+
+    // (si tenés un input de precio en la fila llamado inpPrecio, setealo aquí)
+    if (
+      !isNaN(precioSugerido) &&
+      precioSugerido > 0 &&
+      typeof inpPrecio !== "undefined"
+    ) {
+      inpPrecio.value = Number(precioSugerido).toFixed(2);
+    }
+
+    // pintar stock
+    if (stock <= 0) {
+      stockNote.textContent = "SIN STOCK";
+      stockNote.style.color = "#b71c1c";
+    } else {
+      stockNote.textContent = `Stock: ${stock}`;
+      stockNote.style.color = "#1b5e20";
+    }
+
+    // pintar detalle
+    if (p) {
+      const venceTxt = p.vencimiento
+        ? ` • Vence: ${formatDate ? formatDate(p.vencimiento) : p.vencimiento}`
+        : "";
+      detailNote.innerHTML = `<strong>${p.marca || "-"}</strong> — ${
+        p.detalle || "Sin detalle"
+      }${venceTxt} • Precio sug.: ${
+        money ? money(p.precio) : "$ " + Number(p.precio || 0).toFixed(2)
+      }`;
+    } else {
+      detailNote.textContent = "";
+    }
+
+    // si ya tenés validaciones/cálculos en tu fila, llamalos acá:
+    if (typeof validateQtyVsStock === "function") validateQtyVsStock();
+    if (typeof syncRow === "function") syncRow();
+    if (typeof recalcItems === "function") recalcItems();
+  };
+
+  // agregar al TD de producto
+  tdProd.append(sel, stockNote, detailNote);
 
   sel.onchange = () => {
     const opt = sel.options[sel.selectedIndex];
