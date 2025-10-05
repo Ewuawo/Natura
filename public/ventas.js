@@ -167,6 +167,7 @@ function openNueva() {
   ui.sumItems.textContent = money(0);
   ui.sumInteres.textContent = "";
   ui.sumTotalConInteres.textContent = "";
+  ui.frmVenta.entrega && (ui.frmVenta.entrega.value = 0);
 
   // fecha hoy
   ui.frmVenta.fecha.value = toInputDate(new Date());
@@ -182,6 +183,10 @@ function openNueva() {
           }</option>`
       )
       .join("");
+
+  ui.frmVenta?.entrega?.addEventListener("input", () => {
+    recalcItems();
+  });
 
   // tipo pago
   ui.frmVenta.tipoPago.value = "Contado";
@@ -384,9 +389,13 @@ function recalcItems() {
   const tipo = ui.frmVenta.tipoPago.value;
   const interesPct = Number(ui.frmVenta.interes.value || 0);
   if (tipo === "Credito") {
-    const tci = +(totalItems + (totalItems * interesPct) / 100).toFixed(2);
-    ui.sumInteres.textContent = `Interés: ${interesPct.toFixed(2)}%`;
-    ui.sumTotalConInteres.textContent = `Total con interés: ${money(tci)}`;
+    const tci = +(base + (base * interesPct) / 100).toFixed(2);
+    ui.sumInteres.textContent = `Interés: ${interesPct.toFixed(
+      2
+    )}% • Entrega: ${money(entrega)}`;
+    ui.sumTotalConInteres.textContent = `A financiar: ${money(
+      base
+    )} • Total con interés: ${money(tci)}`;
 
     const totalCuotas = sum(state.cuotasForm, (c) => c.monto || 0);
     ui.sumCuotas.textContent = money(totalCuotas);
@@ -412,9 +421,7 @@ ui.btnGenerarCuotas?.addEventListener("click", () => {
     state.itemsForm,
     (r) => (r.cantidad || 0) * (r.precioUnit || 0)
   );
-  const totalConInteres = +(totalItems + (totalItems * interes) / 100).toFixed(
-    2
-  );
+  const totalConInteres = +(base + (base * interes) / 100).toFixed(2);
 
   let primerVto =
     ui.frmVenta.primerVencimiento.value || toInputDate(new Date());
@@ -525,6 +532,20 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
       alert(data?.error || "No se pudo crear la venta");
       return;
     }
+    // NUEVO: si es crédito y hay entrega, registramos el pago inicial
+    const entrega = Number(ui.frmVenta.entrega?.value || 0);
+    if (payload.tipoPago === "Credito" && entrega > 0 && data?.ventaId) {
+      try {
+        await fetch(`/api/ventas/${data.ventaId}/pagos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ monto: entrega, fecha: payload.fecha }),
+        });
+      } catch (e) {
+        console.warn("No se pudo registrar la entrega automáticamente:", e);
+      }
+    }
+
     closeNueva();
     await refreshVentas();
     if (data?.ventaId) {
