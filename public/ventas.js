@@ -218,7 +218,9 @@ function addItemRow() {
     state.productos
       .map(
         (p) =>
-          `<option value="${p.id}" data-precio="${p.precio}" data-stock="${p.cantidad || 0}">
+          `<option value="${p.id}" data-precio="${p.precio}" data-stock="${
+            p.cantidad || 0
+          }">
             ${p.nombre} (${p.marca})
           </option>`
       )
@@ -306,12 +308,19 @@ function addItemRow() {
     // Detalle
     if (p) {
       const venceTxt = p.vencimiento
-        ? ` • Vence: ${typeof formatDate === "function" ? formatDate(p.vencimiento) : p.vencimiento}`
+        ? ` • Vence: ${
+            typeof formatDate === "function"
+              ? formatDate(p.vencimiento)
+              : p.vencimiento
+          }`
         : "";
-      detailNote.innerHTML =
-        `<strong>${p.marca || "-"}</strong> — ${p.detalle || "Sin detalle"}${venceTxt} • Precio sug.: ${
-          typeof money === "function" ? money(p.precio) : "$ " + Number(p.precio || 0).toFixed(2)
-        }`;
+      detailNote.innerHTML = `<strong>${p.marca || "-"}</strong> — ${
+        p.detalle || "Sin detalle"
+      }${venceTxt} • Precio sug.: ${
+        typeof money === "function"
+          ? money(p.precio)
+          : "$ " + Number(p.precio || 0).toFixed(2)
+      }`;
     } else {
       detailNote.textContent = "";
     }
@@ -326,53 +335,51 @@ function addItemRow() {
   ui.tblItemsBody.append(tr);
 }
 
-
-  function currentStock() {
+function currentStock() {
+  const opt = sel.options[sel.selectedIndex];
+  return Number(opt?.dataset?.stock || 0);
+}
+function validateQtyVsStock() {
+  const stock = currentStock();
+  const qty = Number(inpCant.value || 0);
+  if (stock >= 0 && qty > stock) {
+    inpCant.classList.add("input-bad");
+    stockNote.classList.add("bad");
+    if (!stockNote.textContent.includes("•")) {
+      stockNote.textContent += " • Cantidad supera el stock";
+    }
+  } else {
+    inpCant.classList.remove("input-bad");
+    // restaura texto base (SIN STOCK / Stock: N)
     const opt = sel.options[sel.selectedIndex];
-    return Number(opt?.dataset?.stock || 0);
-  }
-  function validateQtyVsStock() {
-    const stock = currentStock();
-    const qty = Number(inpCant.value || 0);
-    if (stock >= 0 && qty > stock) {
-      inpCant.classList.add("input-bad");
+    const st = Number(opt?.dataset?.stock || 0);
+    if (st <= 0) {
+      stockNote.textContent = "SIN STOCK";
       stockNote.classList.add("bad");
-      if (!stockNote.textContent.includes("•")) {
-        stockNote.textContent += " • Cantidad supera el stock";
-      }
     } else {
-      inpCant.classList.remove("input-bad");
-      // restaura texto base (SIN STOCK / Stock: N)
-      const opt = sel.options[sel.selectedIndex];
-      const st = Number(opt?.dataset?.stock || 0);
-      if (st <= 0) {
-        stockNote.textContent = "SIN STOCK";
-        stockNote.classList.add("bad");
-      } else {
-        stockNote.textContent = `Stock: ${st}`;
-        stockNote.classList.remove("bad");
-        stockNote.classList.add("good");
-      }
+      stockNote.textContent = `Stock: ${st}`;
+      stockNote.classList.remove("bad");
+      stockNote.classList.add("good");
     }
   }
-
-  function syncRow() {
-    const productoId = Number(sel.value) || null;
-    const cantidad = Number(inpCant.value) || 0;
-    const precioUnit = Number(inpPrecio.value) || 0;
-    const subtotal = cantidad * precioUnit;
-    tdSub.textContent = money(subtotal);
-
-    const idx = state.itemsForm.findIndex((x) => x.id === rowId);
-    const row = { id: rowId, productoId, cantidad, precioUnit };
-    if (idx === -1) state.itemsForm.push(row);
-    else state.itemsForm[idx] = row;
-  }
-
-  // init state row
-  sel.dispatchEvent(new Event("change"));
-  inpCant.dispatchEvent(new Event("input"));
 }
+
+function syncRow() {
+  const productoId = Number(sel.value) || null;
+  const cantidad = Number(inpCant.value) || 0;
+  const precioUnit = Number(inpPrecio.value) || 0;
+  const subtotal = cantidad * precioUnit;
+  tdSub.textContent = money(subtotal);
+
+  const idx = state.itemsForm.findIndex((x) => x.id === rowId);
+  const row = { id: rowId, productoId, cantidad, precioUnit };
+  if (idx === -1) state.itemsForm.push(row);
+  else state.itemsForm[idx] = row;
+}
+
+// init state row
+sel.dispatchEvent(new Event("change"));
+inpCant.dispatchEvent(new Event("input"));
 
 function renumerarItems() {
   $$("#tbl-items tbody tr").forEach(
