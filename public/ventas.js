@@ -218,7 +218,9 @@ function addItemRow() {
         (p) =>
           `<option value="${p.id}" data-precio="${p.precio}" data-stock="${
             p.cantidad || 0
-          }">${p.nombre} (${p.marca || ""})</option>`
+          }">
+            ${p.nombre} (${p.marca || ""})
+          </option>`
       )
       .join("");
 
@@ -235,7 +237,7 @@ function addItemRow() {
   detailNote.style.marginTop = "4px";
   detailNote.textContent = "";
 
-  // la mini-ficha va debajo del select
+  // agregamos el detalle debajo del select
   tdProd.append(sel, stockNote, detailNote);
 
   const tdCant = document.createElement("td");
@@ -293,6 +295,7 @@ function addItemRow() {
       }
     } else {
       inpCant.classList.remove("input-bad");
+      // restaura texto base (SIN STOCK / Stock: N)
       const st = currentStock();
       if (st <= 0) {
         stockNote.textContent = "SIN STOCK";
@@ -304,6 +307,7 @@ function addItemRow() {
       }
     }
   }
+
   function syncRow() {
     const productoId = Number(sel.value) || null;
     const cantidad = Number(inpCant.value) || 0;
@@ -359,7 +363,7 @@ function addItemRow() {
     recalcItems();
   };
 
-  // init state row (ahora que todo existe)
+  // init state row (cuando ya existe todo)
   sel.dispatchEvent(new Event("change"));
   inpCant.dispatchEvent(new Event("input"));
 }
