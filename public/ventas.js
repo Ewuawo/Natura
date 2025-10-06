@@ -385,7 +385,7 @@ function recalcItems() {
   const interesPct = Number(ui.frmVenta.interes.value || 0);
   const entrega = Number(ui.frmVenta.entrega?.value || 0);
 
-  // lo que se financia = total items - entrega (mínimo 0)
+  // lo que se financia
   const montoBase = Math.max(totalItems - entrega, 0);
 
   if (tipo === "Credito") {
@@ -437,7 +437,7 @@ ui.btnGenerarCuotas?.addEventListener("click", () => {
   state.cuotasForm = [];
   ui.tblCuotasBody.innerHTML = "";
   for (let i = 0; i < n; i++) {
-    const nro = i + 1;
+    const nro = i + 1; // empieza en 1
     const vto = i === 0 ? primerVto : addMonths(primerVto, i);
     const monto = i === n - 1 ? rem : cuotaBase;
     pushCuotaRow({ nro, venceEl: vto, monto });
@@ -517,7 +517,7 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
 
   // ===== REEMPLAZAR ESTE BLOQUE =====
   if (payload.tipoPago === "Credito") {
-    // Si no hay cuotas cargadas, las generamos automáticamente
+    // Si no hay cuotas cargadas, generarlas automáticamente
     if (state.cuotasForm.length === 0) {
       const n = Math.max(1, Number(ui.frmVenta.cantidadCuotas.value || 1));
       const interes = Number(ui.frmVenta.interes.value || 0);
@@ -547,13 +547,13 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
       }
     }
 
-    // Pasamos las cuotas al payload
     payload.cuotas = state.cuotasForm.map((c) => ({
       nro: c.nro,
       venceEl: c.venceEl,
       monto: Number(c.monto),
     }));
   }
+
   // ===== FIN BLOQUE REEMPLAZADO =====
 
   try {
