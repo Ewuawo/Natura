@@ -40,19 +40,14 @@
     </style>
   </head>
   <body>
-    <!-- Topbar con menú hamburguesa -->
+    <!-- Topbar -->
     <header class="topbar">
-      <button
-        class="hamburger"
-        aria-label="Abrir menú"
-        onclick="document.body.classList.toggle('menu-open')"
-      >
-        ☰
-      </button>
+      <!-- CAMBIO: sin onclick, con id="btnMenu" -->
+      <button id="btnMenu" class="hamburger" aria-label="Abrir menú">☰</button>
       <div class="brand">Natura <span>Graciela</span></div>
     </header>
 
-    <!-- Sidebar: desktop fijo / mobile off-canvas -->
+    <!-- Sidebar -->
     <nav id="sidebar" class="sidebar" aria-hidden="true">
       <h1 style="margin: 0 0 8px 0; font-size: 20px; line-height: 1.1">
         Natura<br />Graciela
@@ -63,7 +58,7 @@
       <a class="active" href="ventas.html">Ventas</a>
     </nav>
 
-    <!-- Fondo para cerrar el menú en mobile -->
+    <!-- Fondo overlay -->
     <div class="backdrop" id="backdrop"></div>
 
     <main class="content">
@@ -115,10 +110,10 @@
             <label>Fecha <input type="date" name="fecha" /></label>
             <label
               >Cliente
-              <select name="clienteId" required></select
-            ></label>
-            <label>
-              Tipo de pago
+              <select name="clienteId" required></select>
+            </label>
+            <label
+              >Tipo de pago
               <select name="tipoPago" required>
                 <option value="Contado">Contado</option>
                 <option value="Credito">Crédito</option>
@@ -169,17 +164,21 @@
                   min="0"
                   step="0.01"
                   value="0"
-              /></label>
+                />
+              </label>
 
-              <label for="entrega">Entrega (anticipo)</label>
-              <input
-                id="entrega"
-                name="entrega"
-                type="number"
-                min="0"
-                step="0.01"
-                value="0"
-              />
+              <!-- CAMBIO: input de entrega dentro del label -->
+              <label
+                >Entrega (anticipo)
+                <input
+                  id="entrega"
+                  name="entrega"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value="0"
+                />
+              </label>
 
               <label
                 >Cuotas (cantidad)
@@ -189,10 +188,12 @@
                   min="1"
                   step="1"
                   value="1"
-              /></label>
+                />
+              </label>
               <label
-                >1º vencimiento <input type="date" name="primerVencimiento"
-              /></label>
+                >1º vencimiento
+                <input type="date" name="primerVencimiento" />
+              </label>
               <div style="display: flex; align-items: flex-end">
                 <button type="button" id="btnGenerarCuotas">
                   Generar cuotas
@@ -323,9 +324,12 @@
           >
             <label
               >Monto
-              <input type="number" name="monto" min="0" step="0.01" required
-            /></label>
-            <label>Fecha <input type="date" name="fecha" /></label>
+              <input type="number" name="monto" min="0" step="0.01" required />
+            </label>
+            <label
+              >Fecha
+              <input type="date" name="fecha" />
+            </label>
           </div>
           <div style="margin-top: 12px; display: flex; gap: 8px">
             <button type="submit">Aplicar</button>
@@ -337,7 +341,7 @@
 
     <script src="ventas.js"></script>
 
-    <!-- JS para abrir/cerrar el menú hamburguesa -->
+    <!-- JS menú hamburguesa (sin inline) -->
     <script>
       (function () {
         const btn = document.getElementById("btnMenu");
