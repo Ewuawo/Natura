@@ -10,7 +10,6 @@
     <title>Ventas</title>
     <link rel="stylesheet" href="styles.css" />
     <style>
-      /* ayuditas visuales */
       .note {
         font-size: 12px;
         opacity: 0.8;
@@ -42,7 +41,6 @@
   <body>
     <!-- Topbar -->
     <header class="topbar">
-      <!-- CAMBIO: sin onclick, con id="btnMenu" -->
       <button id="btnMenu" class="hamburger" aria-label="Abrir menú">☰</button>
       <div class="brand">Natura <span>Graciela</span></div>
     </header>
@@ -58,7 +56,6 @@
       <a class="active" href="ventas.html">Ventas</a>
     </nav>
 
-    <!-- Fondo overlay -->
     <div class="backdrop" id="backdrop"></div>
 
     <main class="content">
@@ -147,6 +144,7 @@
             </table>
           </div>
 
+          <!-- Bloque Crédito -->
           <div id="boxCredito" style="display: none; margin-top: 16px">
             <h4>Crédito</h4>
             <div
@@ -166,8 +164,6 @@
                   value="0"
                 />
               </label>
-
-              <!-- CAMBIO: input de entrega dentro del label -->
               <label
                 >Entrega (anticipo)
                 <input
@@ -179,7 +175,6 @@
                   value="0"
                 />
               </label>
-
               <label
                 >Cuotas (cantidad)
                 <input
@@ -341,7 +336,7 @@
 
     <script src="ventas.js"></script>
 
-    <!-- JS menú hamburguesa (sin inline) -->
+    <!-- JS del menú (sin inline) -->
     <script>
       (function () {
         const btn = document.getElementById("btnMenu");

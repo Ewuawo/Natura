@@ -182,7 +182,7 @@ function openNueva() {
       )
       .join("");
 
-  // escuchar “Entrega” (si existe en el HTML dentro del bloque Crédito)
+  // escuchar “Entrega”
   ui.frmVenta?.entrega?.addEventListener("input", recalcItems);
   ui.frmVenta.entrega && (ui.frmVenta.entrega.value = 0);
 
@@ -193,7 +193,7 @@ function openNueva() {
   ui.frmVenta.cantidadCuotas.value = 1;
   ui.frmVenta.primerVencimiento.value = toInputDate(new Date());
 
-  addItemRow(); // 1 fila por defecto
+  addItemRow(); // 1 fila
   recalcItems();
 
   ui.boxNueva.style.display = "block";
@@ -232,7 +232,7 @@ function addItemRow() {
   stockNote.className = "note";
   stockNote.textContent = "";
 
-  // mini-ficha de detalle
+  // mini-ficha
   const detailNote = document.createElement("div");
   detailNote.className = "note";
   detailNote.style.opacity = "0.9";
@@ -491,7 +491,6 @@ function pushCuotaRow(c) {
 }
 
 // ==================== Submit nueva venta ====================
-// submit nueva venta
 ui.frmVenta?.addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const f = ui.frmVenta.elements;
@@ -515,9 +514,8 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
     return;
   }
 
-  // ===== REEMPLAZAR ESTE BLOQUE =====
+  // Si es crédito y no hay cuotas cargadas, generarlas automáticamente
   if (payload.tipoPago === "Credito") {
-    // Si no hay cuotas cargadas, generarlas automáticamente
     if (state.cuotasForm.length === 0) {
       const n = Math.max(1, Number(ui.frmVenta.cantidadCuotas.value || 1));
       const interes = Number(ui.frmVenta.interes.value || 0);
@@ -553,8 +551,6 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
       monto: Number(c.monto),
     }));
   }
-
-  // ===== FIN BLOQUE REEMPLAZADO =====
 
   try {
     const r = await fetch("/api/ventas", {
@@ -754,16 +750,22 @@ async function refreshVentas() {
   renderListado();
 }
 
-// ==================== Eventos globales ====================
-ui.buscarVentas?.addEventListener(
-  "input",
-  debounce(() => {
-    state.filter = ui.buscarVentas.value || "";
-    renderListado();
-  }, 200)
-);
-
+// ==================== Eventos globales (enganches claves) ====================
 document.addEventListener("DOMContentLoaded", async () => {
   await loadBase();
   renderListado();
+
+  // Botones principales de "Nueva venta"
+  ui.btnNueva?.addEventListener("click", openNueva);
+  ui.btnCancelarVenta?.addEventListener("click", closeNueva);
+  ui.btnAddItem?.addEventListener("click", addItemRow);
+
+  // Buscar en el listado
+  ui.buscarVentas?.addEventListener(
+    "input",
+    debounce(() => {
+      state.filter = ui.buscarVentas.value || "";
+      renderListado();
+    }, 200)
+  );
 });
