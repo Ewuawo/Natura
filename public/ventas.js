@@ -491,6 +491,7 @@ function pushCuotaRow(c) {
 }
 
 // ==================== Submit nueva venta ====================
+// submit nueva venta
 ui.frmVenta?.addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const f = ui.frmVenta.elements;
@@ -514,17 +515,46 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
     return;
   }
 
+  // ===== REEMPLAZAR ESTE BLOQUE =====
   if (payload.tipoPago === "Credito") {
+    // Si no hay cuotas cargadas, las generamos automáticamente
     if (state.cuotasForm.length === 0) {
-      alert("Generá o cargá cuotas para crédito.");
-      return;
+      const n = Math.max(1, Number(ui.frmVenta.cantidadCuotas.value || 1));
+      const interes = Number(ui.frmVenta.interes.value || 0);
+      const totalItems = sum(
+        state.itemsForm,
+        (r) => (r.cantidad || 0) * (r.precioUnit || 0)
+      );
+      const entrega = Number(ui.frmVenta.entrega?.value || 0);
+      const montoBase = Math.max(totalItems - entrega, 0);
+      const totalConInteres = +(
+        montoBase +
+        (montoBase * interes) / 100
+      ).toFixed(2);
+
+      const primerVto =
+        ui.frmVenta.primerVencimiento.value || toInputDate(new Date());
+      const cuotaBase = +(totalConInteres / n).toFixed(2);
+      let rem = +(totalConInteres - cuotaBase * (n - 1)).toFixed(2);
+
+      state.cuotasForm = [];
+      for (let i = 0; i < n; i++) {
+        state.cuotasForm.push({
+          nro: i + 1,
+          venceEl: i === 0 ? primerVto : addMonths(primerVto, i),
+          monto: i === n - 1 ? rem : cuotaBase,
+        });
+      }
     }
+
+    // Pasamos las cuotas al payload
     payload.cuotas = state.cuotasForm.map((c) => ({
       nro: c.nro,
       venceEl: c.venceEl,
       monto: Number(c.monto),
     }));
   }
+  // ===== FIN BLOQUE REEMPLAZADO =====
 
   try {
     const r = await fetch("/api/ventas", {
@@ -539,7 +569,7 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
       return;
     }
 
-    // si es crédito y hay entrega, registramos pago inicial
+    // Si es crédito y hay entrega, registrar como pago inicial
     const entrega = Number(ui.frmVenta.entrega?.value || 0);
     if (payload.tipoPago === "Credito" && entrega > 0 && data?.ventaId) {
       try {
@@ -555,9 +585,7 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
 
     closeNueva();
     await refreshVentas();
-    if (data?.ventaId) {
-      openDetalle(data.ventaId);
-    }
+    if (data?.ventaId) openDetalle(data.ventaId);
   } catch (e) {
     console.error(e);
     alert("Error de red guardando venta");
