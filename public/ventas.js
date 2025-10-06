@@ -190,7 +190,7 @@ function openNueva() {
   ui.frmVenta.tipoPago.value = "Contado";
   ui.boxCredito.style.display = "none";
   ui.frmVenta.interes.value = 0;
-  ui.frmVenta.cantidadCuotas.value = 3;
+  ui.frmVenta.cantidadCuotas.value = 1;
   ui.frmVenta.primerVencimiento.value = toInputDate(new Date());
 
   addItemRow(); // 1 fila por defecto
