@@ -84,7 +84,6 @@ function formatDate(v) {
   const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v);
 }
-// === NUEVO === mostrar botón solo si es crédito y hay saldo
 function puedeRegistrarPago(v) {
   return String(v.tipoPago) === "Credito" && Number(v.saldo) > 0;
 }
@@ -126,7 +125,6 @@ function renderListado() {
     tr.append(cell(money(v.saldo)));
     tr.append(cell(`${Number(v.interes || 0).toFixed(2)}%`));
 
-    // === MODIFICADO: acciones condicionadas
     const acc = document.createElement("td");
     acc.style.whiteSpace = "nowrap";
     const bDet = btn("Detalle", "btn btn-sm", () => openDetalle(v.id));
@@ -167,10 +165,10 @@ function openNueva() {
   ui.sumItems.textContent = money(0);
   ui.sumInteres.textContent = "";
   ui.sumTotalConInteres.textContent = "";
-  ui.frmVenta.entrega && (ui.frmVenta.entrega.value = 0);
 
   // fecha hoy
   ui.frmVenta.fecha.value = toInputDate(new Date());
+
   // clientes
   const sel = ui.frmVenta.clienteId;
   sel.innerHTML =
@@ -184,9 +182,9 @@ function openNueva() {
       )
       .join("");
 
-  ui.frmVenta?.entrega?.addEventListener("input", () => {
-    recalcItems();
-  });
+  // escuchar “Entrega” (si existe en el HTML dentro del bloque Crédito)
+  ui.frmVenta?.entrega?.addEventListener("input", recalcItems);
+  ui.frmVenta.entrega && (ui.frmVenta.entrega.value = 0);
 
   // tipo pago
   ui.frmVenta.tipoPago.value = "Contado";
@@ -234,7 +232,7 @@ function addItemRow() {
   stockNote.className = "note";
   stockNote.textContent = "";
 
-  // === NUEVO: mini-ficha de detalle del producto
+  // mini-ficha de detalle
   const detailNote = document.createElement("div");
   detailNote.className = "note";
   detailNote.style.opacity = "0.9";
@@ -242,7 +240,6 @@ function addItemRow() {
   detailNote.style.marginTop = "4px";
   detailNote.textContent = "";
 
-  // agregamos el detalle debajo del select
   tdProd.append(sel, stockNote, detailNote);
 
   const tdCant = document.createElement("td");
@@ -300,7 +297,6 @@ function addItemRow() {
       }
     } else {
       inpCant.classList.remove("input-bad");
-      // restaura texto base (SIN STOCK / Stock: N)
       const st = currentStock();
       if (st <= 0) {
         stockNote.textContent = "SIN STOCK";
@@ -312,7 +308,6 @@ function addItemRow() {
       }
     }
   }
-
   function syncRow() {
     const productoId = Number(sel.value) || null;
     const cantidad = Number(inpCant.value) || 0;
@@ -326,7 +321,7 @@ function addItemRow() {
     else state.itemsForm[idx] = row;
   }
 
-  // --- Un solo onchange: precio + stock + DETALLE
+  // onchange único: precio + stock + detalle
   sel.onchange = () => {
     const opt = sel.options[sel.selectedIndex];
     const precioSugerido = Number(opt?.dataset?.precio || 0);
@@ -336,7 +331,6 @@ function addItemRow() {
       inpPrecio.value = precioSugerido.toFixed(2);
     }
 
-    // stock visible
     if (stock <= 0) {
       stockNote.textContent = "SIN STOCK";
       stockNote.classList.remove("good");
@@ -349,7 +343,7 @@ function addItemRow() {
       stockNote.style.color = "#1b5e20";
     }
 
-    // === NUEVO: mostrar detalle del producto seleccionado
+    // detalle
     const pid = Number(sel.value);
     const p = state.productos.find((x) => x.id === pid);
     if (p) {
@@ -368,7 +362,7 @@ function addItemRow() {
     recalcItems();
   };
 
-  // init state row (cuando ya existe todo)
+  // init
   sel.dispatchEvent(new Event("change"));
   inpCant.dispatchEvent(new Event("input"));
 }
@@ -379,6 +373,7 @@ function renumerarItems() {
   );
 }
 
+// ==================== Totales y cuotas ====================
 function recalcItems() {
   const totalItems = sum(
     state.itemsForm,
@@ -388,14 +383,22 @@ function recalcItems() {
 
   const tipo = ui.frmVenta.tipoPago.value;
   const interesPct = Number(ui.frmVenta.interes.value || 0);
+  const entrega = Number(ui.frmVenta.entrega?.value || 0);
+
+  // lo que se financia = total items - entrega (mínimo 0)
+  const montoBase = Math.max(totalItems - entrega, 0);
+
   if (tipo === "Credito") {
-    const tci = +(base + (base * interesPct) / 100).toFixed(2);
+    const totalConInteres = +(
+      montoBase +
+      (montoBase * interesPct) / 100
+    ).toFixed(2);
     ui.sumInteres.textContent = `Interés: ${interesPct.toFixed(
       2
     )}% • Entrega: ${money(entrega)}`;
     ui.sumTotalConInteres.textContent = `A financiar: ${money(
-      base
-    )} • Total con interés: ${money(tci)}`;
+      montoBase
+    )} • Total con interés: ${money(totalConInteres)}`;
 
     const totalCuotas = sum(state.cuotasForm, (c) => c.monto || 0);
     ui.sumCuotas.textContent = money(totalCuotas);
@@ -413,27 +416,30 @@ ui.frmVenta?.tipoPago?.addEventListener("change", () => {
   recalcItems();
 });
 
-// generar cuotas
+// generar cuotas (usa total a financiar = totalItems - entrega)
 ui.btnGenerarCuotas?.addEventListener("click", () => {
   const n = Math.max(1, Number(ui.frmVenta.cantidadCuotas.value || 1));
   const interes = Number(ui.frmVenta.interes.value || 0);
+
   const totalItems = sum(
     state.itemsForm,
     (r) => (r.cantidad || 0) * (r.precioUnit || 0)
   );
-  const totalConInteres = +(base + (base * interes) / 100).toFixed(2);
+  const entrega = Number(ui.frmVenta.entrega?.value || 0);
+  const montoBase = Math.max(totalItems - entrega, 0);
+  const totalConInteres = +(montoBase + (montoBase * interes) / 100).toFixed(2);
 
   let primerVto =
     ui.frmVenta.primerVencimiento.value || toInputDate(new Date());
-  const base = +(totalConInteres / n).toFixed(2);
-  let rem = +(totalConInteres - base * (n - 1)).toFixed(2);
+  const cuotaBase = +(totalConInteres / n).toFixed(2);
+  let rem = +(totalConInteres - cuotaBase * (n - 1)).toFixed(2);
 
   state.cuotasForm = [];
   ui.tblCuotasBody.innerHTML = "";
   for (let i = 0; i < n; i++) {
     const nro = i + 1;
     const vto = i === 0 ? primerVto : addMonths(primerVto, i);
-    const monto = i === n - 1 ? rem : base;
+    const monto = i === n - 1 ? rem : cuotaBase;
     pushCuotaRow({ nro, venceEl: vto, monto });
   }
   recalcItems();
@@ -484,7 +490,7 @@ function pushCuotaRow(c) {
   ui.tblCuotasBody.append(tr);
 }
 
-// submit nueva venta
+// ==================== Submit nueva venta ====================
 ui.frmVenta?.addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const f = ui.frmVenta.elements;
@@ -532,7 +538,8 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
       alert(data?.error || "No se pudo crear la venta");
       return;
     }
-    // NUEVO: si es crédito y hay entrega, registramos el pago inicial
+
+    // si es crédito y hay entrega, registramos pago inicial
     const entrega = Number(ui.frmVenta.entrega?.value || 0);
     if (payload.tipoPago === "Credito" && entrega > 0 && data?.ventaId) {
       try {
@@ -557,10 +564,6 @@ ui.frmVenta?.addEventListener("submit", async (ev) => {
   }
 });
 
-ui.btnAddItem?.addEventListener("click", addItemRow);
-ui.btnNueva?.addEventListener("click", openNueva);
-ui.btnCancelarVenta?.addEventListener("click", closeNueva);
-
 // ==================== Detalle de venta ====================
 async function openDetalle(id) {
   state.detalleVentaId = id;
@@ -574,7 +577,6 @@ async function openDetalle(id) {
     }
     const det = await r.json();
 
-    // cabecera
     const v = det.venta;
     ui.ventaCab.innerHTML = `
       <div><strong>Venta #${v.id}</strong> — ${formatDate(v.fecha)} — ${
@@ -588,7 +590,6 @@ async function openDetalle(id) {
       } (ID ${v.clienteId})</div>
     `;
 
-    // items
     ui.detItemsBody.innerHTML = "";
     det.items.forEach((it, i) => {
       const tr = document.createElement("tr");
@@ -601,7 +602,6 @@ async function openDetalle(id) {
       ui.detItemsBody.append(tr);
     });
 
-    // cuotas + pagos si es crédito
     const esCredito = String(v.tipoPago).toLowerCase() === "credito";
     ui.bloqueCuotas.style.display = esCredito ? "block" : "none";
     ui.detCuotasBody.innerHTML = "";
@@ -645,7 +645,6 @@ ui.btnCerrarDetalle?.addEventListener("click", () => {
 });
 
 // ==================== Pago ====================
-// === MODIFICADO: bloquea apertura si no corresponde
 function openPago(ventaId) {
   const venta = state.ventas.find((v) => v.id === ventaId);
   if (!venta) {
@@ -670,7 +669,6 @@ ui.btnCancelarPago?.addEventListener(
   () => (ui.boxPago.style.display = "none")
 );
 
-// === MODIFICADO: valida monto <= saldo antes de enviar
 ui.frmPago?.addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const f = ui.frmPago.elements;
@@ -684,7 +682,6 @@ ui.frmPago?.addEventListener("submit", async (ev) => {
     return;
   }
 
-  // Validaciones front extra
   const venta = state.ventas.find((v) => v.id === ventaId);
   if (!venta) {
     alert("Venta no encontrada");
